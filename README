@@ -1,0 +1,5 @@
+# Sperrmüll Altmark
+
+Ruby script to pull calendar (html) files for each village in http://abfallkalender.altmarkkreis-salzwedel.info/kal.php and parse it with Nokogiri to output a list of next Spermülls in the Altmark, sorted by date.
+
+This is a hack, nonetheless GPL3+, Copyright Felix Wolfsteller 2017.

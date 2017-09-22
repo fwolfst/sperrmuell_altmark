@@ -1,0 +1,65 @@
+#!/usr/bin/env ruby
+
+# Copyright 2017 Felix Wolfsteller
+# Licenced under the GPL v3+
+
+# Pull files from altmarkkreis-salzwedel.info output calendar of Sperrmüll.
+
+require 'net/http'
+require 'uri'
+require 'nokogiri'
+
+$KAL_URI = URI("http://abfallkalender.altmarkkreis-salzwedel.info/kal.php")
+$INDEX_FILE = 'output/index.html'
+
+def get_index
+  response = Net::HTTP::get $KAL_URI
+  File.write($INDEX_FILE, response)
+end
+
+def ids_from_index
+  doc = Nokogiri::HTML(File.open($INDEX_FILE))
+  doc.xpath("//input[@type='radio']").map{|i| i['value']}
+end
+
+def get_doc_from_id id
+  r = Net::HTTP.post_form $KAL_URI, {"pk" => id, 'weiter' => 'yes'}
+  File.write("output/#{id}.html", r.body)
+end
+
+def get_docs_from_ids ids
+  ids.each{|i| get_doc_from_id i}
+end
+
+def get_info_from_docs
+  Dir['output/[0-9]*'].map do |f|
+    doc = Nokogiri::HTML(File.open f)
+    place = doc.css('.newstext > u').text[/".*"/]
+    doc.css('td.sperr').map{|n| [n.parent.children[0].text, place]}
+  end.flatten(1).compact
+end
+
+def sort_info! info
+  info.sort_by! do |i|
+    d,m,y = i[0].match(/(\d\d).(\d\d).(\d\d\d\d)/i).captures
+    y+m+d
+  end
+end
+
+def main
+  Dir.mkdir unless Dir.exists?('output')
+
+  get_index
+  ids = ids_from_index
+  get_info_from_ids ids
+  dates_places = get_dates_from_docs
+  sort_info! dates_places
+
+  dates_places.each do |date, place|
+    puts date + " -> " + place
+  end
+end
+
+main
+exit 0
+
